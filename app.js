@@ -80,9 +80,9 @@ function makeModule(data,index){
     }
   }
   const outline=new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(w,UNIT.h,d)),new THREE.LineBasicMaterial({color:0x474b48,transparent:true,opacity:.38}));outline.position.y=UNIT.h/2;group.add(outline);
-  group.position.set(data.x,data.floor*UNIT.h,data.z); group.traverse(o=>o.userData.module=group); scene.add(group); return group;
+  group.position.set(data.x,data.floor*UNIT.h,data.z); group.traverse(o=>{if(o!==group)o.userData.module=group}); scene.add(group); return group;
 }
-function serialize(){return modules.map(m=>({...m.userData,x:m.position.x,z:m.position.z,floor:Math.round(m.position.y/UNIT.h)}));}
+function serialize(){return modules.map(m=>({id:m.userData.id,type:m.userData.type,material:m.userData.material,rotation:m.userData.rotation,x:m.position.x,z:m.position.z,floor:Math.round(m.position.y/UNIT.h)}));}
 function rebuild(data,record=false){modules.forEach(m=>scene.remove(m));modules=data.map(makeModule);selected=modules[0]||null;updateSelection();updateStats();if(record)saveHistory();}
 function saveHistory(){const state=JSON.stringify(serialize());history=history.slice(0,historyIndex+1);history.push(state);historyIndex=history.length-1;localStorage.setItem('modu-layout',state);}
 function snap(v){return Math.round(v/GRID)*GRID}
