@@ -12,15 +12,30 @@ const initial = [
   {x:0,z:-3.6,floor:0,rotation:1,type:'terrace',material:'timber'}
 ];
 
-const canvas = document.querySelector('#scene');
+let canvas = document.querySelector('#scene');
 const viewport = document.querySelector('#viewport');
-const renderer = new THREE.WebGLRenderer({canvas, antialias:true, alpha:false});
-renderer.setPixelRatio(Math.min(devicePixelRatio, window.innerWidth < 700 ? 1.5 : 2));
-renderer.shadowMap.enabled = true;
-renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-renderer.outputColorSpace = THREE.SRGBColorSpace;
-renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.05;
+let renderer=null, fallbackContext=null;
+try{
+  renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:false});
+  renderer.setPixelRatio(Math.min(devicePixelRatio,window.innerWidth<700?1.5:2));
+  renderer.shadowMap.enabled=true;
+  renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+  renderer.outputColorSpace=THREE.SRGBColorSpace;
+  renderer.toneMapping=THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure=1.05;
+}catch(error){
+  const replacement=document.createElement('canvas');
+  replacement.id='scene';
+  replacement.setAttribute('aria-label','模組建築簡化預覽');
+  canvas.replaceWith(replacement);
+  canvas=replacement;
+  fallbackContext=canvas.getContext('2d');
+  document.documentElement.classList.add('fallback-renderer');
+  const badge=document.createElement('div');
+  badge.className='fallback-badge';
+  badge.textContent='相容模式 · 簡化 3D 預覽';
+  viewport.appendChild(badge);
+}
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0xd8dbd7);
 scene.fog = new THREE.Fog(0xd8dbd7,24,52);
@@ -126,8 +141,36 @@ document.querySelector('#redoBtn').onclick=()=>{if(historyIndex<history.length-1
 document.querySelector('#exportBtn').onclick=()=>{const blob=new Blob([JSON.stringify({system:'MODU-2400x3600',unit:UNIT,modules:serialize()},null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='modu-layout.json';a.click();URL.revokeObjectURL(a.href)};
 document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>{document.querySelectorAll('[data-view]').forEach(x=>x.classList.remove('active'));b.classList.add('active');const v=b.dataset.view;if(v==='top')camera.position.set(0,22,.01);else if(v==='front')camera.position.set(0,5,18);else camera.position.set(11,10,14);controls.target.set(0,1.2,0);controls.update()});
 
-function resize(){const w=viewport.clientWidth,h=viewport.clientHeight;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix()}
+function drawFallback(){
+  if(!fallbackContext)return;
+  const w=viewport.clientWidth,h=viewport.clientHeight,ctx=fallbackContext;
+  ctx.clearRect(0,0,w,h);ctx.fillStyle='#d8dbd7';ctx.fillRect(0,0,w,h);
+  const scale=Math.min(w,h)/15,cx=w*.5,cy=h*.57;
+  const iso=(x,y,z)=>({x:cx+(x-z)*scale*.72,y:cy+(x+z)*scale*.32-y*scale*.78});
+  ctx.strokeStyle='rgba(100,106,101,.22)';ctx.lineWidth=1;
+  for(let i=-12;i<=12;i+=2){
+    let a=iso(i,0,-12),b=iso(i,0,12);ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();
+    a=iso(-12,0,i);b=iso(12,0,i);ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();
+  }
+  const palette={ivory:'#e3dfd6',concrete:'#a6a59f',charcoal:'#363a38',timber:'#a47f57'};
+  const shade=(hex,amount)=>{const n=parseInt(hex.slice(1),16),r=Math.max(0,Math.min(255,(n>>16)+amount)),g=Math.max(0,Math.min(255,((n>>8)&255)+amount)),b=Math.max(0,Math.min(255,(n&255)+amount));return`rgb(${r},${g},${b})`};
+  [...modules].sort((a,b)=>(a.position.x+a.position.z+a.position.y)-(b.position.x+b.position.z+b.position.y)).forEach(m=>{
+    const r=m.userData.rotation%2===1,mw=r?UNIT.d:UNIT.w,md=r?UNIT.w:UNIT.d;
+    const x=m.position.x,z=m.position.z,y=m.position.y,top=y+UNIT.h;
+    const base=[[x-mw/2,z-md/2],[x+mw/2,z-md/2],[x+mw/2,z+md/2],[x-mw/2,z+md/2]];
+    const B=base.map(p=>iso(p[0],y,p[1])),T=base.map(p=>iso(p[0],top,p[1]));
+    const face=(points,fill)=>{ctx.beginPath();points.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.closePath();ctx.fillStyle=fill;ctx.fill();ctx.strokeStyle=m===selected?'#d45531':'rgba(50,54,51,.5)';ctx.lineWidth=m===selected?2.5:1;ctx.stroke()};
+    const color=palette[m.userData.material]||palette.ivory;
+    face([B[1],B[2],T[2],T[1]],shade(color,-28));
+    face([B[2],B[3],T[3],T[2]],shade(color,-14));
+    face([T[0],T[1],T[2],T[3]],shade(color,12));
+    if(m.userData.type==='living')face([T[2],T[3],iso(x-mw*.33,top*.58,z+md/2),iso(x+mw*.33,top*.58,z+md/2)],'rgba(142,166,169,.78)');
+    ctx.fillStyle='#343834';ctx.font='11px "Noto Sans TC", sans-serif';const label=iso(x,top+.22,z);ctx.textAlign='center';ctx.fillText(m.userData.id,label.x,label.y);
+  });
+}
+function resize(){const w=viewport.clientWidth,h=viewport.clientHeight;camera.aspect=w/h;camera.updateProjectionMatrix();if(renderer)renderer.setSize(w,h,false);else{const ratio=Math.min(devicePixelRatio||1,2);canvas.width=Math.round(w*ratio);canvas.height=Math.round(h*ratio);canvas.style.width=`${w}px`;canvas.style.height=`${h}px`;fallbackContext.setTransform(ratio,0,0,ratio,0,0);drawFallback()}}
 window.addEventListener('resize',resize);resize();
 const stored=localStorage.getItem('modu-layout');rebuild(stored?JSON.parse(stored):initial);saveHistory();
 document.querySelector('#loading').classList.add('done');
-renderer.setAnimationLoop(()=>{controls.update();renderer.render(scene,camera)});
+if(renderer)renderer.setAnimationLoop(()=>{controls.update();renderer.render(scene,camera)});
+else(function fallbackLoop(){controls.update();drawFallback();requestAnimationFrame(fallbackLoop)})();
