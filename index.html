@@ -90,6 +90,17 @@
             </div>
           </label>
           <div class="edit-actions"><button id="rotateBtn">旋轉 90°</button><button id="duplicateBtn">複製</button><button id="deleteBtn" class="danger">刪除</button></div>
+
+          <div id="openingEditor" class="opening-editor">
+            <div class="section-head"><span>門窗元件</span><small id="openingCount">0 個</small></div>
+            <p class="opening-hint">選擇牆面與標準元件，加入後可沿牆調整位置。</p>
+            <div class="field-row">
+              <label>牆面<select id="wallSelect"><option value="front">前牆</option><option value="back">後牆</option><option value="left">左牆</option><option value="right">右牆</option></select></label>
+              <label>元件<select id="openingTypeSelect"><option value="door">單扇門</option><option value="window">標準窗</option><option value="wide">橫向窗</option><option value="full">落地窗</option><option value="passage">連通開口</option></select></label>
+            </div>
+            <button id="addOpeningBtn" class="add-opening-btn">＋ 加入牆面</button>
+            <div id="openingList" class="opening-list"></div>
+          </div>
         </section>
 
         <section class="rules">
@@ -122,6 +133,6 @@
   <script type="importmap">
   {"imports":{"three":"./vendor/three.module.js","three/addons/controls/OrbitControls.js":"./vendor/OrbitControls.js"}}
   </script>
-  <script type="module" src="./app.js?v=20260920-5"></script>
+  <script type="module" src="./app.js?v=20260920-6"></script>
 </body>
 </html>
