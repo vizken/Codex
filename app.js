@@ -138,6 +138,37 @@ document.querySelector('#floorDown').onclick=()=>{currentFloor=Math.max(0,curren
 document.querySelector('#resetBtn').onclick=()=>{localStorage.removeItem('modu-layout');rebuild(initial,true)};
 document.querySelector('#undoBtn').onclick=()=>{if(historyIndex>0){historyIndex--;rebuild(JSON.parse(history[historyIndex]))}};
 document.querySelector('#redoBtn').onclick=()=>{if(historyIndex<history.length-1){historyIndex++;rebuild(JSON.parse(history[historyIndex]))}};
+const importFile=document.querySelector('#importFile');
+document.querySelector('#importBtn').onclick=()=>importFile.click();
+importFile.onchange=async e=>{
+  const file=e.target.files?.[0];
+  if(!file)return;
+  try{
+    if(file.size>2*1024*1024)throw new Error('file-too-large');
+    const parsed=JSON.parse(await file.text());
+    const source=Array.isArray(parsed)?parsed:parsed?.modules;
+    if(!Array.isArray(source)||source.length<1||source.length>200)throw new Error('invalid-modules');
+    const validTypes=new Set(Object.keys(typeNames)),validMaterials=new Set(Object.keys(colors));
+    const normalized=source.map((item,index)=>{
+      const x=Number(item?.x),z=Number(item?.z),floor=Number(item?.floor),rotation=Number(item?.rotation);
+      if(!Number.isFinite(x)||!Number.isFinite(z)||Math.abs(x)>120||Math.abs(z)>120)throw new Error('invalid-position');
+      if(!validTypes.has(item?.type)||!validMaterials.has(item?.material))throw new Error('invalid-module');
+      return{
+        id:typeof item.id==='string'&&item.id.trim()?item.id.trim().slice(0,30):`M-${String(index+1).padStart(2,'0')}`,
+        type:item.type,
+        material:item.material,
+        rotation:((Math.round(Number.isFinite(rotation)?rotation:0)%4)+4)%4,
+        floor:Math.max(0,Math.min(4,Math.round(Number.isFinite(floor)?floor:0))),
+        x:snap(x),z:snap(z)
+      };
+    });
+    history=[];historyIndex=-1;currentFloor=0;document.querySelector('#floorLabel').textContent='1F';
+    rebuild(normalized,true);
+    notify(`已讀入 ${normalized.length} 個模組`);
+  }catch(error){
+    notify('讀入失敗：請選擇 MODU 匯出的 JSON');
+  }finally{e.target.value=''}
+};
 document.querySelector('#exportBtn').onclick=()=>{const blob=new Blob([JSON.stringify({system:'MODU-2400x3600',unit:UNIT,modules:serialize()},null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='modu-layout.json';a.click();URL.revokeObjectURL(a.href)};
 document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>{document.querySelectorAll('[data-view]').forEach(x=>x.classList.remove('active'));b.classList.add('active');const v=b.dataset.view;if(v==='top')camera.position.set(0,22,.01);else if(v==='front')camera.position.set(0,5,18);else camera.position.set(11,10,14);controls.target.set(0,1.2,0);controls.update()});
 
