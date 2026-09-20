@@ -59,7 +59,6 @@ function makeModule(data,index){
   const rotated=data.rotation%2===1, w=rotated?UNIT.d:UNIT.w, d=rotated?UNIT.w:UNIT.d;
   const mat=panelMaterial(colors[data.material]);
   const edgeMat=new THREE.MeshStandardMaterial({color:0x262a28,roughness:.55,metalness:.35});
-  const glassMat=new THREE.MeshPhysicalMaterial({color:0x9db0b2,roughness:.08,transmission:.45,transparent:true,opacity:.72});
   const slab=(x,y,z,sx,sy,sz,m=mat)=>{const o=new THREE.Mesh(new THREE.BoxGeometry(sx,sy,sz),m);o.position.set(x,y,z);o.castShadow=o.receiveShadow=true;group.add(o);return o};
   if(data.type==='terrace'){
     slab(0,.09,0,w,.18,d,panelMaterial(colors.timber));
@@ -70,14 +69,7 @@ function makeModule(data,index){
     slab(-w/2+.09,UNIT.h/2,0,.18,UNIT.h,d,mat);
     slab(w/2-.09,UNIT.h/2,0,.18,UNIT.h,d,mat);
     slab(0,UNIT.h/2,-d/2+.09,w,UNIT.h,.18,mat);
-    if(data.type==='service'){
-      slab(0,UNIT.h/2,d/2-.09,w,UNIT.h,.18,mat);
-      slab(0,UNIT.h/2,d/2+.015,w*.19,UNIT.h*.72,.035,glassMat);
-    }else{
-      slab(0,UNIT.h*.67,d/2-.065,w,.2,.13,mat);
-      slab(0,UNIT.h*.39,d/2-.01,w-.28,UNIT.h*.62,.06,glassMat);
-      slab(0,UNIT.h*.39,d/2+.03,.035,UNIT.h*.62,.09,edgeMat);
-    }
+    slab(0,UNIT.h/2,d/2-.09,w,UNIT.h,.18,mat);
   }
   const outline=new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(w,UNIT.h,d)),new THREE.LineBasicMaterial({color:0x474b48,transparent:true,opacity:.38}));outline.position.y=UNIT.h/2;group.add(outline);
   group.position.set(data.x,data.floor*UNIT.h,data.z); group.traverse(o=>{if(o!==group)o.userData.module=group}); scene.add(group); return group;
@@ -195,7 +187,6 @@ function drawFallback(){
     face([B[1],B[2],T[2],T[1]],shade(color,-28));
     face([B[2],B[3],T[3],T[2]],shade(color,-14));
     face([T[0],T[1],T[2],T[3]],shade(color,12));
-    if(m.userData.type==='living')face([T[2],T[3],iso(x-mw*.33,top*.58,z+md/2),iso(x+mw*.33,top*.58,z+md/2)],'rgba(142,166,169,.78)');
     ctx.fillStyle='#343834';ctx.font='11px "Noto Sans TC", sans-serif';const label=iso(x,top+.22,z);ctx.textAlign='center';ctx.fillText(m.userData.id,label.x,label.y);
   });
 }
