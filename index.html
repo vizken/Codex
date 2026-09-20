@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#161816" />
+  <meta name="description" content="2.4 × 3.6 公尺極簡模組建築組合設計工具" />
+  <title>MODU 空間組合器</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600&family=Oswald:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <div id="app">
+    <header class="topbar">
+      <div class="brand"><span>MODU</span><small>空間組合器</small></div>
+      <div class="project-name">未命名模組住宅 <span class="save-state">本機即時保存</span></div>
+      <div class="top-actions">
+        <button id="undoBtn" class="icon-btn" aria-label="復原" title="復原">↶</button>
+        <button id="redoBtn" class="icon-btn" aria-label="重做" title="重做">↷</button>
+        <button id="exportBtn" class="outline-btn">匯出配置</button>
+      </div>
+    </header>
+
+    <main class="workspace">
+      <aside class="panel library-panel">
+        <div class="panel-title"><span>模組庫</span><span class="index">01</span></div>
+        <p class="hint">點選加入，再於場景拖曳定位</p>
+
+        <div class="module-card active" data-type="living">
+          <div class="module-preview preview-living"><i></i><i></i></div>
+          <div><strong>通用空間盒</strong><small>起居・臥室・工作</small></div>
+          <button class="add-module" aria-label="加入通用空間盒">＋</button>
+        </div>
+        <div class="module-card" data-type="service">
+          <div class="module-preview preview-service"><i></i></div>
+          <div><strong>設備核心盒</strong><small>廚房・衛浴・管線</small></div>
+          <button class="add-module" aria-label="加入設備核心盒">＋</button>
+        </div>
+        <div class="module-card" data-type="terrace">
+          <div class="module-preview preview-terrace"><i></i></div>
+          <div><strong>半戶外盒</strong><small>入口・露台・凹廊</small></div>
+          <button class="add-module" aria-label="加入半戶外盒">＋</button>
+        </div>
+
+        <div class="rule-block">
+          <span class="eyebrow">BASIC UNIT</span>
+          <div class="dimension"><b>2.4</b><span>×</span><b>3.6</b><span>×</span><b>2.8</b><em>m</em></div>
+          <p>室內淨高約 2.4 m<br>平面採 0.6 m 模數網格</p>
+        </div>
+      </aside>
+
+      <section id="viewport" class="viewport">
+        <canvas id="scene"></canvas>
+        <div class="view-tools">
+          <button data-view="perspective" class="active">透視</button>
+          <button data-view="top">平面</button>
+          <button data-view="front">立面</button>
+        </div>
+        <div class="floor-tools" aria-label="樓層選擇">
+          <button id="floorDown">−</button><span><small>樓層</small><b id="floorLabel">1F</b></span><button id="floorUp">＋</button>
+        </div>
+        <div class="scene-help">拖曳模組移動 · 拖曳空白旋轉視角 · 滾輪縮放</div>
+        <div id="toast" class="toast" role="status" aria-live="polite"></div>
+        <div id="loading" class="loading">正在建立 3D 空間…</div>
+      </section>
+
+      <aside class="panel inspector-panel">
+        <div class="panel-title"><span>設計資訊</span><span class="index">02</span></div>
+        <div class="stats-grid">
+          <div><small>模組</small><b id="moduleCount">4</b><span>盒</span></div>
+          <div><small>樓地板</small><b id="totalArea">34.6</b><span>m²</span></div>
+          <div><small>樓層</small><b id="floorCount">1</b><span>F</span></div>
+          <div><small>網格</small><b>0.6</b><span>m</span></div>
+        </div>
+
+        <section id="selectionPanel" class="selection-panel">
+          <div class="section-head"><span>選取模組</span><small id="selectedId">M-01</small></div>
+          <label>類型<select id="typeSelect"><option value="living">通用空間盒</option><option value="service">設備核心盒</option><option value="terrace">半戶外盒</option></select></label>
+          <div class="field-row"><label>X <input id="posX" type="number" step="0.6"></label><label>Z <input id="posZ" type="number" step="0.6"></label></div>
+          <label>外觀材質
+            <div class="swatches">
+              <button data-material="ivory" class="swatch ivory active" aria-label="象牙白"></button>
+              <button data-material="concrete" class="swatch concrete" aria-label="清水灰"></button>
+              <button data-material="charcoal" class="swatch charcoal" aria-label="深炭黑"></button>
+              <button data-material="timber" class="swatch timber" aria-label="木質"></button>
+            </div>
+          </label>
+          <div class="edit-actions"><button id="rotateBtn">旋轉 90°</button><button id="duplicateBtn">複製</button><button id="deleteBtn" class="danger">刪除</button></div>
+        </section>
+
+        <section class="rules">
+          <div class="section-head"><span>組合檢查</span><small id="ruleState">可組裝</small></div>
+          <ul><li class="ok"><i></i>模組位於結構網格</li><li class="ok"><i></i>樓層柱位已對齊</li><li id="overlapRule" class="ok"><i></i>無空間重疊</li></ul>
+        </section>
+
+        <button id="resetBtn" class="reset-btn">回到示範配置</button>
+      </aside>
+    </main>
+  </div>
+
+  <script>
+    window.addEventListener('error', function () {
+      var loading = document.getElementById('loading');
+      if (loading && !loading.classList.contains('done')) {
+        loading.textContent = '3D 顯示啟動失敗，請重新整理頁面';
+        loading.classList.add('failed');
+      }
+    });
+    window.setTimeout(function () {
+      var loading = document.getElementById('loading');
+      if (loading && !loading.classList.contains('done')) {
+        loading.textContent = '3D 載入時間較久，請點一下重新載入';
+        loading.classList.add('failed');
+        loading.onclick = function () { window.location.reload(); };
+      }
+    }, 10000);
+  </script>
+  <script type="importmap">
+  {"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"}}
+  </script>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
