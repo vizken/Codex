@@ -19,6 +19,8 @@
       <div class="top-actions">
         <button id="undoBtn" class="icon-btn" aria-label="復原" title="復原">↶</button>
         <button id="redoBtn" class="icon-btn" aria-label="重做" title="重做">↷</button>
+        <button id="importBtn" class="outline-btn">讀入配置</button>
+        <input id="importFile" type="file" accept="application/json,.json" hidden>
         <button id="exportBtn" class="outline-btn">匯出配置</button>
       </div>
     </header>
@@ -120,6 +122,6 @@
   <script type="importmap">
   {"imports":{"three":"./vendor/three.module.js","three/addons/controls/OrbitControls.js":"./vendor/OrbitControls.js"}}
   </script>
-  <script type="module" src="./app.js?v=20260920-3"></script>
+  <script type="module" src="./app.js?v=20260920-4"></script>
 </body>
 </html>
