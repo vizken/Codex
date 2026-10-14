@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Roso Chair V4 | 3D Surface</title>
+<style>html,body{margin:0;background:#0c1420;color:#e9f0f6;font:15px system-ui,-apple-system,sans-serif}header{padding:16px 18px;border-bottom:1px solid #35465a}h1{font-size:20px;margin:0}small{color:#9fb2c7}.layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.4fr);gap:12px;padding:12px}.panel{background:#142334;border:1px solid #33475d;border-radius:12px;overflow:hidden}.panel h2{font-size:14px;margin:0;padding:12px;border-bottom:1px solid #33475d}.ref{width:100%;display:block}.viewport{height:62vh;min-height:360px;position:relative;touch-action:none}#scene{width:100%;height:100%;display:block}#status{position:absolute;top:10px;left:10px;background:#0b1725dd;padding:7px 10px;border-radius:6px;font-size:12px;max-width:80%}.controls{display:flex;flex-wrap:wrap;gap:8px;padding:12px}button{background:#2b435c;color:#fff;border:1px solid #5b7795;border-radius:8px;min-height:44px;padding:8px 13px;font-size:14px}button:focus-visible{outline:2px solid white}.note{padding:0 14px 14px;color:#b7c8d8;font-size:13px;line-height:1.6}@media(max-width:750px){.layout{grid-template-columns:1fr}.viewport{height:52vh;min-height:320px}}</style></head>
+<body><header><h1>Roso Chair · Surface V4</h1><small>Three.js 互動曲面｜概念重建，非原始精確幾何</small></header>
+<div class="layout"><section class="panel"><h2>01 / 原始設計參考</h2><div style="padding:14px;line-height:1.7;color:#c8d5e3">本版先以參數曲面確認手機 WebGL 顯示；原始設計圖尚未嵌入 GitHub 版本。<br>原圖含正視與透視兩個角度，請以原圖比對扭轉方向。</div></section><section class="panel"><h2>02 / Three.js 3D 曲面</h2><div class="viewport"><canvas id="scene"></canvas><div id="status" role="status">正在初始化 Three.js…</div></div><div class="controls"><button id="reset">重設視角</button><button id="top">俯視</button><button id="side">側視</button><button id="wire">網格：關</button><button id="axes">座標軸：開</button></div><div class="note">單指拖曳旋轉、雙指縮放。曲面以 2,000 mm 長度作比例參考，尚未校準原圖幾何。若載入失敗，會顯示錯誤訊息。</div></section></div>
+<script type="module">
+const status=document.getElementById('status');
+try{
+ const THREE=await import('https://cdn.jsdelivr.net/npm/three@0.164.1/+esm');
+ const {OrbitControls}=await import('https://cdn.jsdelivr.net/npm/three@0.164.1/examples/jsm/controls/OrbitControls.js/+esm');
+ const canvas=document.getElementById('scene'), scene=new THREE.Scene();scene.background=new THREE.Color(0x101d2b);
+ const camera=new THREE.PerspectiveCamera(42,1,1,20000);
+ const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:false});renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+ const controls=new OrbitControls(camera,canvas);controls.enableDamping=true;controls.target.set(0,0,0);
+ scene.add(new THREE.HemisphereLight(0xffffff,0x526174,2.1));
+ const light=new THREE.DirectionalLight(0xffffff,2.0);light.position.set(700,1000,1200);scene.add(light);
+ const n=100,m=30,pos=[],idx=[];
+ // 概念帶狀曲面：沿 X 方向起伏，橫向截面連續扭轉；非原圖精確逆向。
+ for(let i=0;i<=n;i++){const t=i/n,x=(t-.5)*2000;
+ const centerZ=200*Math.exp(-Math.pow((t-.43)/.21,2))-65*Math.exp(-Math.pow((t-.78)/.15,2));
+ const twist=.82*Math.sin(2*Math.PI*(t-.16));const width=440-115*Math.exp(-Math.pow((t-.66)/.16,2));
+ for(let j=0;j<=m;j++){const v=j/m*2-1;
+ const y=v*width*.5*Math.cos(twist),z=centerZ+v*width*.5*Math.sin(twist)+60*(1-v*v)*Math.sin(Math.PI*t);
+ pos.push(x,y,z);}}
+ for(let i=0;i<n;i++)for(let j=0;j<m;j++){let a=i*(m+1)+j,b=a+m+1;idx.push(a,b,a+1,b,b+1,a+1);}
+ const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));geo.setIndex(idx);geo.computeVertexNormals();
+ const mat=new THREE.MeshStandardMaterial({color:0xc5cdd6,metalness:.18,roughness:.55,side:THREE.DoubleSide});const mesh=new THREE.Mesh(geo,mat);scene.add(mesh);
+ const axes=new THREE.AxesHelper(380);scene.add(axes);
+ const box=new THREE.Box3().setFromObject(mesh),center=box.getCenter(new THREE.Vector3());controls.target.copy(center);
+ function view(x,y,z){camera.position.set(center.x+x,center.y+y,center.z+z);camera.lookAt(center);controls.update();}
+ view(1750,-1800,1150);
+ function resize(){const w=canvas.clientWidth,h=canvas.clientHeight;if(w&&h){renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();}}
+ new ResizeObserver(resize).observe(canvas);resize();
+ let running=true;function animate(){if(!running)return;requestAnimationFrame(animate);controls.update();renderer.render(scene,camera);}animate();
+ document.getElementById('reset').addEventListener('click',()=>view(1750,-1800,1150));
+ document.getElementById('top').addEventListener('click',()=>view(0,0,2600));
+ document.getElementById('side').addEventListener('click',()=>view(0,-2600,350));
+ document.getElementById('wire').addEventListener('click',e=>{mat.wireframe=!mat.wireframe;e.currentTarget.textContent='網格：'+(mat.wireframe?'開':'關');});
+ document.getElementById('axes').addEventListener('click',e=>{axes.visible=!axes.visible;e.currentTarget.textContent='座標軸：'+(axes.visible?'開':'關');});
+ status.textContent='WebGL 已啟動｜'+pos.length/3+' 頂點｜'+idx.length/3+' 三角面';
+}catch(e){status.textContent='3D 啟動失敗：'+String(e.message||e);console.error(e);}
+</script></body></html>
